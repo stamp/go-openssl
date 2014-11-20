@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"os/exec"
 	"regexp"
 
@@ -13,8 +14,10 @@ import (
 
 type CA struct {
 	path   string
+	crl    string
 	key    string
 	config string
+	root   string
 
 	content    []byte
 	contentKey []byte
@@ -37,6 +40,7 @@ func (o *Openssl) LoadCA(filename string, keyfile string) (*CA, error) {
 	c.path = filename
 	c.key = keyfile
 	c.config = o.GetConfigFile()
+	c.crl = o.Path + "/common/crl.pem"
 
 	c.content, err = ioutil.ReadFile(filename)
 	if err != nil {
@@ -53,10 +57,13 @@ func (o *Openssl) LoadCA(filename string, keyfile string) (*CA, error) {
 func (o *Openssl) CreateCA(filename string, keyfile string) (*CA, error) {
 	o.Init()
 
+	log.Info("Create CA")
+
 	cert := &CA{
 		path:   filename,
 		key:    keyfile,
 		config: o.GetConfigFile(),
+		crl:    o.Path + "/common/crl.pem",
 	}
 
 	content, err := exec.Command(
@@ -100,6 +107,28 @@ func (o *Openssl) CreateCA(filename string, keyfile string) (*CA, error) {
 		return nil, err
 	}
 
+	// Uppdate the CRL (client revoke list)
+	content, err = exec.Command(
+		"openssl", "ca",
+		"-gencrl",
+		"-out", "/dev/stdout",
+		"-config", cert.config,
+		"-batch",
+	).Output()
+	if err != nil {
+		log.Error(err)
+		return cert, err
+	}
+
+	if len(content) == 0 {
+		err = fmt.Errorf("Generated CRL is 0 in length")
+		return cert, err
+	}
+
+	if err = ioutil.WriteFile(cert.crl, content, 0600); err != nil {
+		return cert, err
+	}
+
 	return cert, nil
 }
 
@@ -107,6 +136,8 @@ func (ca *CA) Sign(request *CSR) (*Cert, error) {
 	if ca == nil {
 		return nil, fmt.Errorf("No CA was supplied")
 	}
+
+	log.Info("Sign CSR")
 
 	cmd := exec.Command(
 		"openssl", "ca",
@@ -147,6 +178,8 @@ func (ca *CA) Sign(request *CSR) (*Cert, error) {
 }
 
 func (ca *CA) Revoke(cert *Cert) error {
+	log.Info("Sign CERT")
+
 	cmd := exec.Command(
 		"openssl", "ca",
 		"-revoke", "/dev/stdin",
@@ -168,6 +201,35 @@ func (ca *CA) Revoke(cert *Cert) error {
 
 	if err := cmd.Wait(); err != nil {
 		return fmt.Errorf("Exit code ", err, " - ", string(b.Bytes()))
+	}
+
+	// Uppdate the CRL (client revoke list)
+	content, err := exec.Command(
+		"openssl", "ca",
+		"-gencrl",
+		"-out", "/dev/stdout",
+		"-config", ca.config,
+		"-batch",
+	).Output()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	if len(content) == 0 {
+		err = fmt.Errorf("Generated CRL is 0 in length")
+		return err
+	}
+
+	if err = ioutil.WriteFile(ca.crl, content, 0600); err != nil {
+		return err
+	}
+
+	if err = os.Remove(cert.GetFilePath()); err != nil {
+		return err
+	}
+
+	if err = os.Remove(cert.GetKeyPath()); err != nil {
 		return err
 	}
 
@@ -176,6 +238,10 @@ func (ca *CA) Revoke(cert *Cert) error {
 
 func (ca *CA) GetFilePath() string {
 	return ca.path
+}
+
+func (ca *CA) GetCRLPath() string {
+	return ca.crl
 }
 
 func (ca *CA) String() string {

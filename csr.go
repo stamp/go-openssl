@@ -41,6 +41,8 @@ func (o *Openssl) CreateCSR(cn string) (*CSR, error) {
 	var err error
 	o.Init()
 
+	log.Info("Create CSR")
+
 	c := &CSR{}
 	//c.path = filename
 	//c.key = keyfile
