@@ -81,12 +81,37 @@ func (o *Openssl) CreateCSR(cn string) (*CSR, error) {
 		return nil, err
 	}
 
-	//if err = ioutil.WriteFile(c.path, c.content, 0600); err != nil {
-	//return nil, err
-	//}
 	//if err = ioutil.WriteFile(c.key, c.contentKey, 0600); err != nil {
 	//return nil, err
 	//}
 
 	return c, nil
+}
+
+func (csr *CSR) Save(filename string) error {
+	if err := ioutil.WriteFile(filename, csr.content, 0600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (csr *CSR) SaveKey(filename string) error {
+	if err := ioutil.WriteFile(filename, csr.contentKey, 0600); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (csr *CSR) String() string {
+	if csr != nil {
+		return string(csr.content)
+	}
+	return ""
+}
+
+func (csr *CSR) KeyString() string {
+	if csr != nil {
+		return string(csr.contentKey)
+	}
+	return ""
 }

@@ -46,9 +46,12 @@ func (o *Openssl) LoadCA(filename string, keyfile string) (*CA, error) {
 	if err != nil {
 		return nil, err
 	}
-	c.contentKey, err = ioutil.ReadFile(keyfile)
-	if err != nil {
-		return nil, err
+
+	if keyfile != "" {
+		c.contentKey, err = ioutil.ReadFile(keyfile)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return c, nil
