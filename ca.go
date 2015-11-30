@@ -36,6 +36,9 @@ func (o *Openssl) LoadCA(filename string, keyfile string) (*CA, error) {
 	var err error
 	o.Init()
 
+	filename = o.Path + "/ca/" + filename
+	keyfile = o.Path + "/ca/" + keyfile
+
 	c := &CA{}
 	c.path = filename
 	c.key = keyfile
@@ -60,7 +63,10 @@ func (o *Openssl) LoadCA(filename string, keyfile string) (*CA, error) {
 func (o *Openssl) CreateCA(filename string, keyfile string) (*CA, error) {
 	o.Init()
 
-	log.Info("Create CA")
+	filename = o.Path + "/ca/" + filename
+	keyfile = o.Path + "/ca/" + keyfile
+
+	log.Info("Create CA (", filename, ", ", keyfile, ")")
 
 	cert := &CA{
 		path:   filename,
@@ -81,10 +87,9 @@ func (o *Openssl) CreateCA(filename string, keyfile string) (*CA, error) {
 		"-batch",
 		"-utf8",
 		"-subj", "/C="+o.Country+"/ST="+o.Province+"/L="+o.City+"/O="+o.Organization+"/CN="+o.CommonName+"/emailAddress="+o.Email,
-	).Output()
+	).CombinedOutput()
 	if err != nil {
-		log.Error(err)
-		return nil, err
+		return nil, fmt.Errorf("openssl req: " + err.Error() + " (" + string(content) + ")")
 	}
 
 	reCert := regexp.MustCompile("(?ms)-----BEGIN CERTIFICATE-----(.+)-----END CERTIFICATE-----")
@@ -117,10 +122,9 @@ func (o *Openssl) CreateCA(filename string, keyfile string) (*CA, error) {
 		"-out", "/dev/stdout",
 		"-config", cert.config,
 		"-batch",
-	).Output()
+	).CombinedOutput()
 	if err != nil {
-		log.Error(err)
-		return cert, err
+		return cert, fmt.Errorf("openssl gencrl: " + err.Error() + " (" + string(content) + ")")
 	}
 
 	if len(content) == 0 {
@@ -181,7 +185,7 @@ func (ca *CA) Sign(request *CSR) (*Cert, error) {
 }
 
 func (ca *CA) Revoke(cert *Cert) error {
-	log.Info("Sign CERT")
+	log.Info("Revoke CERT")
 
 	cmd := exec.Command(
 		"openssl", "ca",

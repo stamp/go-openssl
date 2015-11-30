@@ -23,6 +23,7 @@ func (o *Openssl) LoadOrCreateDH(filename string, size int) (*DH, error) {
 }
 
 func (o *Openssl) LoadDH(filename string) (*DH, error) {
+	filename = o.Path + "/" + filename
 	content, err := ioutil.ReadFile(filename)
 
 	if err != nil {
@@ -37,6 +38,7 @@ func (o *Openssl) LoadDH(filename string) (*DH, error) {
 
 func (o *Openssl) CreateDH(filename string, size int) (*DH, error) {
 	var err error
+	filename = o.Path + "/" + filename
 
 	log.Info("Generate Diffie-Hellman key (", filename, ")")
 

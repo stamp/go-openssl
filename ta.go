@@ -22,6 +22,7 @@ func (o *Openssl) LoadOrCreateTA(filename string) (*TA, error) {
 }
 
 func (o *Openssl) LoadTA(filename string) (*TA, error) {
+	filename = o.Path + "/" + filename
 	content, err := ioutil.ReadFile(filename)
 
 	if err != nil {
@@ -36,6 +37,7 @@ func (o *Openssl) LoadTA(filename string) (*TA, error) {
 
 func (o *Openssl) CreateTA(filename string) (*TA, error) {
 	var err error
+	filename = o.Path + "/" + filename
 
 	log.Info("Generate TLS-Auth Key (", filename, ")")
 

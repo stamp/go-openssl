@@ -13,10 +13,10 @@ type Cert struct {
 	contentKey []byte
 }
 
-func (o *Openssl) LoadOrCreateCert(filename, keyfile, cn string, ca *CA) (*Cert, error) {
+func (o *Openssl) LoadOrCreateCert(filename, keyfile, cn string, ca *CA, server bool) (*Cert, error) {
 	cert, err := o.LoadCert(filename, keyfile)
 	if err != nil {
-		return o.CreateCert(filename, keyfile, cn, ca)
+		return o.CreateCert(filename, keyfile, cn, ca, server)
 	}
 
 	return cert, nil
@@ -25,6 +25,9 @@ func (o *Openssl) LoadOrCreateCert(filename, keyfile, cn string, ca *CA) (*Cert,
 func (o *Openssl) LoadCert(filename, keyfile string) (*Cert, error) {
 	var err error
 	o.Init()
+
+	filename = o.Path + "/" + filename
+	keyfile = o.Path + "/" + keyfile
 
 	c := &Cert{}
 	c.path = filename
@@ -42,12 +45,15 @@ func (o *Openssl) LoadCert(filename, keyfile string) (*Cert, error) {
 	return c, nil
 }
 
-func (o *Openssl) CreateCert(filename, keyfile, cn string, ca *CA) (*Cert, error) {
+func (o *Openssl) CreateCert(filename, keyfile, cn string, ca *CA, server bool) (*Cert, error) {
 	o.Init()
 
-	request, err := o.CreateCSR(cn)
+	filename = o.Path + "/" + filename
+	keyfile = o.Path + "/" + keyfile
+
+	request, err := o.CreateCSR(cn, server)
 	if err != nil {
-		return nil, fmt.Errorf("Create csr failed: ", err)
+		return nil, fmt.Errorf("Create csr failed: " + err.Error())
 	}
 
 	cert, err := ca.Sign(request)

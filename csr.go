@@ -21,9 +21,10 @@ func (o *Openssl) LoadCSR(filename, keyfile string) (*CSR, error) {
 	var err error
 	o.Init()
 
+	filename = o.Path + "/" + filename
+	keyfile = o.Path + "/" + keyfile
+
 	c := &CSR{}
-	//c.path = filename
-	//c.key = keyfile
 
 	c.content, err = ioutil.ReadFile(filename)
 	if err != nil {
@@ -37,18 +38,16 @@ func (o *Openssl) LoadCSR(filename, keyfile string) (*CSR, error) {
 	return c, nil
 }
 
-func (o *Openssl) CreateCSR(cn string) (*CSR, error) {
+func (o *Openssl) CreateCSR(cn string, server bool) (*CSR, error) {
 	var err error
 	o.Init()
 
 	log.Info("Create CSR")
 
 	c := &CSR{}
-	//c.path = filename
-	//c.key = keyfile
 
-	content, err := exec.Command(
-		"openssl", "req",
+	args := []string{
+		"req",
 		"-days", "3650",
 		"-nodes",
 		"-new",
@@ -56,13 +55,17 @@ func (o *Openssl) CreateCSR(cn string) (*CSR, error) {
 		"-out", "/dev/stdout",
 		"-config", o.GetConfigFile(),
 		"-batch",
-		"-extensions", "server",
 		"-utf8",
-		"-subj", "/C="+o.Country+"/ST="+o.Province+"/L="+o.City+"/O="+o.Organization+"/CN="+cn+"/emailAddress="+o.Email,
-	).Output()
+		"-subj", "/C=" + o.Country + "/ST=" + o.Province + "/L=" + o.City + "/O=" + o.Organization + "/CN=" + cn + "/emailAddress=" + o.Email,
+	}
+
+	if server {
+		args = append(args, "-extensions", "server")
+	}
+
+	content, err := exec.Command("openssl", args...).CombinedOutput()
 	if err != nil {
-		log.Error(err)
-		return nil, err
+		return nil, fmt.Errorf("openssl req: " + err.Error() + " (" + string(content) + ")")
 	}
 
 	reCert := regexp.MustCompile("(?ms)-----BEGIN CERTIFICATE REQUEST-----(.+)-----END CERTIFICATE REQUEST-----")

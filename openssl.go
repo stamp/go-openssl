@@ -31,8 +31,8 @@ func (o *Openssl) Init() {
 	o.mkdir(o.Path + "/clients")
 	o.mkdir(o.Path + "/common")
 
-	o.write_serial("cert/common/SERIAL")
-	o.write_index("cert/common/index.txt")
+	o.write_serial(o.Path + "/common/SERIAL")
+	o.write_index(o.Path + "/common/index.txt")
 
 	o.initiated = true
 }
@@ -51,7 +51,7 @@ func (o *Openssl) WriteConfigFile(filename string) { // {{{
 	log.Info("Create openssl configuration  (" + filename + ")")
 
 	content := "# OpenSSL config file\n"
-	content += "HOME = \"cert\"\n"
+	content += "HOME = \"" + o.Path + "\"\n"
 	content += "RANDFILE = $HOME/common/random\n"
 	content += "oid_section = new_oids\n"
 	content += "\n"
@@ -162,15 +162,19 @@ func (o *Openssl) mkdir(dir string) {
 	}
 }
 
+func (o *Openssl) AppendPath(filename string) string {
+	return o.Path + "/" + filename
+}
+
 func (o *Openssl) write_serial(filename string) { // {{{
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		log.Info("Create SERIAL file")
-		ioutil.WriteFile(filename, []byte("1000"), 0660)
+		err := ioutil.WriteFile(filename, []byte("1000"), 0660)
+		log.Info("Create SERIAL file: ", err)
 	}
 }                                                // }}}
 func (o *Openssl) write_index(filename string) { // {{{
 	if _, err := os.Stat(filename); os.IsNotExist(err) {
-		log.Info("Create index.txt")
-		ioutil.WriteFile(filename, []byte(""), 0660)
+		err := ioutil.WriteFile(filename, []byte(""), 0660)
+		log.Info("Create index.txt: ", err)
 	}
 }
